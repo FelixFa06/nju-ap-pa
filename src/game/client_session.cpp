@@ -73,11 +73,29 @@ void ClientSession::on_peer_join(PeerId) {
 }
 
 void ClientSession::on_peer_message(PeerId, const Message& message) {
-    info("TODO(client): update the local view from " + message.type);
+    if (message.type == "WELCOME") {
+        m_seat = message.get_int("id", -1);
+    } else if (message.type == "HAND") {
+        m_hand = split_card_list(message.get("cards"));
+    } else if (message.type == "TURN") {
+        m_current = message.get_int("player", -1);
+        m_top = message.get("top");
+    } else if (message.type == "PLAYED") {
+        m_top = message.get("cards");
+    } else if (message.type == "GAMEOVER" || message.type == "ABORTED") {
+        // 框架已经把阶段切回大厅，这里只需清掉本局视图。
+        m_hand.clear();
+        m_top.clear();
+        m_current = -1;
+    }
 }
 
 void ClientSession::on_peer_leave(PeerId) {
-    info("TODO(client): the host went away -- report it and return to the lobby");
+    info("the host disconnected");
+    m_hand.clear();
+    m_top.clear();
+    m_current = -1;
+    return_to_lobby();
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +117,8 @@ Session::Result ClientSession::play(const Args& args) {
 }
 
 Session::Result ClientSession::cards(const Args&) {
-    info("TODO(client): print the hand cached from the last HAND message");
+    out() << "HAND cards=" << join_cards(m_hand) << "\n";
+    out().flush();
     return Result::Continue;
 }
 

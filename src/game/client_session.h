@@ -3,7 +3,9 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
+#include "game/cards.h"
 #include "game/session.h"
 #include "protocol/net.h"
 #include "protocol/unix.h"
@@ -54,6 +56,12 @@ protected:
 
 private:
     PeerId m_host;
+
+    // 本地视图：只保存主机主动发给自己的私有/公开信息。
+    int m_seat = -1;
+    std::vector<std::string> m_hand;
+    int m_current = -1;
+    std::string m_top;
 };
 
 } // 命名空间 uno
