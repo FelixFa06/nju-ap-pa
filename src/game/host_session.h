@@ -87,7 +87,7 @@ private:
     std::vector<Player> m_players;
     std::map<PeerId, int> m_seat_of;
 
-    // ---- 阶段二的牌桌状态（阶段三里继续扩展）-------------------------
+    // ---- 牌桌状态（阶段二 + 阶段三拓展规则）---------------------------
     struct GameState {
         std::vector<std::string> draw_pile; // 摸牌堆（头部是下一张）
         std::vector<std::string> discard;   // 弃牌堆（尾部是当前牌面）
@@ -99,7 +99,25 @@ private:
         bool drew_this_turn = false;        // 本回合是否已经抽过牌
         std::string drawn_card;             // 本回合抽到的那张牌
         std::vector<bool> uno_declared;     // 每人是否已经喊过 UNO
+        std::vector<bool> uno_reportable;   // 刚出到 1 张且未喊，可被举报
         std::mt19937 rng;                   // 洗牌 / 重洗用的确定性随机源
+
+        // ---- 等待窗口 ---------------------------------------------------
+        // 刚打出 W4，暂停并等受害者回答质疑。
+        bool waiting_challenge = false;
+        int challenge_victim = -1;
+        int challenge_offender = -1;
+        bool challenge_legal = false;   // W4 出牌时手里没有同色牌
+        char challenge_color = 0;       // W4 指定的颜色
+
+        // 刚打出 7，等出牌者用 SWAP 指定交换对象。
+        bool waiting_swap = false;
+        int swap_player = -1;
+
+        // ---- 罚抽链 -----------------------------------------------------
+        // 叠加出来的 W4 不可质疑：只有普通（链条首张）W4 会打开质疑窗口。
+        bool chain_has_d2 = false;          // 这条链里出现过 D2
+        std::string last_penalty;           // 上一张罚抽牌："D2" / "W4"
     };
     GameState m_game;
 
@@ -125,7 +143,20 @@ private:
     void apply_draw(int seat);
     void apply_pass(int seat);
     void apply_uno(int seat, int target);
+    void apply_challenge(int seat, bool accept);
+    void apply_swap(int seat, int target);
     void finish_round(int winner);
+
+    // ---- 阶段三辅助 ----------------------------------------------------
+    bool card_playable(const Card& card, const Card& top) const;
+    bool has_color_in_hand(int seat, char color) const;
+    void send_all_hands();
+    void close_uno_window(int actor);
+    void mark_one_card(int seat);
+    void reset_chain();
+    void clear_waiting();
+    void apply_zero_swap();
+    void open_seven_window(int seat);
 };
 
 } // 命名空间 uno
